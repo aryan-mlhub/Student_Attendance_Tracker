@@ -35,7 +35,13 @@ while True:
 
         if total_classes > 0:
             percentage = (present / total_classes) * 100
+
             print("Attendance Percentage:", round(percentage, 2), "%")
+
+            if percentage < 75:
+                print("Status: Defaulter")
+            else:
+                print("Status: Regular")
         else:
             print("No attendance has been recorded.")
 
