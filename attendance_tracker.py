@@ -8,7 +8,8 @@ absent = 0
 total_classes = 0
 
 while True:
-    print("\n1. Mark Present")
+    print("\n===== Attendance Menu =====")
+    print("1. Mark Present")
     print("2. Mark Absent")
     print("3. View Attendance")
     print("4. Exit")
@@ -46,5 +47,8 @@ while True:
             print("No attendance has been recorded.")
 
     elif choice == "4":
-        print("Thank you for using Student Attendance Tracker.")
+        print("\nThank you for using Student Attendance Tracker.")
         break
+
+    else:
+        print("Invalid choice. Please enter a number from 1 to 4.")
