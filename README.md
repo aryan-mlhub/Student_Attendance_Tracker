@@ -1,8 +1,25 @@
-# 🎓 Student Attendance Tracker with Bulk Student Import
+# 🎓 Student Attendance Tracker (Desktop Tkinter & Web Streamlit)
 
-A desktop application designed for college faculty and educational institutions to manage student attendance, track attendance percentages, identify students at risk of attendance shortage (< 75%), and import entire class rosters at once via **Bulk Student Import**.
+A complete college attendance tracking and management system designed for college faculty and educational institutions. Features student management, daily attendance logging, multi-format bulk import (CSV, TXT, PDF, Excel), attendance percentage calculations, < 75% deficit alerts, and CSV exports.
 
-Developed entirely from scratch using **Python 3**, **Tkinter / ttk**, and **SQLite3**, operating **100% offline** with zero cloud, API, or external server dependencies.
+Available in two versions:
+1. **🌐 Web Application (`streamlit_app/`):** Streamlit-based web interface deployable directly to **Streamlit Community Cloud**.
+2. **🖥️ Desktop Application (`main.py`):** Standalone Tkinter/ttk desktop interface operating 100% offline.
+
+---
+
+## ⚡ Quick Launch
+
+### 🌐 Run Streamlit Web Application
+```powershell
+pip install -r streamlit_app/requirements.txt
+python -m streamlit run streamlit_app/app.py
+```
+
+### 🖥️ Run Tkinter Desktop Application
+```powershell
+python main.py
+```
 
 ---
 
