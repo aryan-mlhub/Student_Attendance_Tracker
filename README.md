@@ -2,15 +2,23 @@
 
 A complete college attendance tracking and management system designed for college faculty and educational institutions. Features student management, daily attendance logging, multi-format bulk import (CSV, TXT, PDF, Excel), attendance percentage calculations, < 75% deficit alerts, and CSV exports.
 
-Available in two versions:
-1. **🌐 Web Application (`streamlit_app/`):** Streamlit-based web interface deployable directly to **Streamlit Community Cloud**.
-2. **🖥️ Desktop Application (`main.py`):** Standalone Tkinter/ttk desktop interface operating 100% offline.
+Available in three editions:
+1. **🌐 Full-Stack Web Application (`flask_app/`):** Complete Flask + Tailwind CSS + Jinja2 + SQLite web application ready for local or cloud deployment (Vercel, Render).
+2. **🎈 Interactive Web Application (`streamlit_app/`):** Streamlit-based web interface deployable directly to **Streamlit Community Cloud**.
+3. **🖥️ Desktop Application (`main.py`):** Standalone Tkinter/ttk desktop interface operating 100% offline.
 
 ---
 
 ## ⚡ Quick Launch
 
-### 🌐 Run Streamlit Web Application
+### 🌐 Run Flask Web Application
+```powershell
+pip install -r flask_app/requirements.txt
+python flask_app/app.py
+```
+Visit: `http://127.0.0.1:5000` (or `5001`)
+
+### 🎈 Run Streamlit Web Application
 ```powershell
 pip install -r streamlit_app/requirements.txt
 python -m streamlit run streamlit_app/app.py

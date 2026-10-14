@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Student Attendance Tracker{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        navy: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col md:flex-row">
+
+    <!-- Mobile Top Navigation Bar -->
+    <div class="md:hidden flex items-center justify-between bg-navy-900 text-white px-4 py-3 border-b border-slate-800 sticky top-0 z-40">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-sm shadow">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                </svg>
+            </div>
+            <div>
+                <span class="font-bold tracking-tight text-sm">Attendance Tracker</span>
+            </div>
+        </div>
+        <button id="mobile-menu-btn" class="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Open Navigation Menu">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Mobile Sidebar Drawer Backdrop -->
+    <div id="mobile-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Navigation (Desktop & Mobile Drawer) -->
+    <aside id="mobile-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-navy-900 text-slate-300 flex flex-col justify-between transition-transform duration-200 ease-in-out -translate-x-full md:translate-x-0 md:static md:inset-auto md:w-64 border-r border-slate-800/80 shadow-xl md:shadow-none">
+        <div>
+            <!-- Branding Header -->
+            <div class="px-5 py-5 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-base leading-tight tracking-tight">Attendance Tracker</h1>
+                    </div>
+                </div>
+                <!-- Close Button (Mobile Only) -->
+                <button id="close-sidebar-btn" class="md:hidden text-slate-400 hover:text-white p-1" aria-label="Close Sidebar">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Total Students Chip -->
+            <div class="px-4 pt-4 pb-2">
+                <div class="bg-slate-800/60 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between text-xs">
+                    <span class="text-slate-400 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>
+                        Enrolled Students
+                    </span>
+                    <span class="font-semibold text-white px-2 py-0.5 rounded bg-slate-700 font-mono text-[11px]">{{ total_students_count }}</span>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="px-3 py-2 space-y-1">
+                <!-- Dashboard -->
+                <a href="{{ url_for('dashboard') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'dashboard' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'dashboard' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+
+                <!-- Students -->
+                <a href="{{ url_for('students_list') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'students' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'students' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <span>Students</span>
+                </a>
+
+                <!-- Mark Attendance -->
+                <a href="{{ url_for('attendance_mark') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'attendance' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'attendance' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Mark Attendance</span>
+                </a>
+
+                <!-- Attendance History -->
+                <a href="{{ url_for('attendance_history') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'history' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'history' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Attendance History</span>
+                </a>
+
+                <!-- Bulk Import -->
+                <a href="{{ url_for('bulk_import') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'import' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'import' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <span>Bulk Import</span>
+                </a>
+
+                <!-- Reports & Defaulters -->
+                <a href="{{ url_for('reports_view') }}" class="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors {% if active_page == 'reports' %}bg-brand-600 text-white shadow-sm{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <svg class="w-5 h-5 mr-3 {% if active_page == 'reports' %}text-white{% else %}text-slate-400 group-hover:text-slate-200{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>Reports & Defaulters</span>
+                </a>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-h-screen min-w-0 overflow-y-auto">
+
+        <!-- Top Header for Desktop -->
+        <header class="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-6 py-4 flex items-center justify-between shadow-xs">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight">{% block page_title %}Dashboard{% endblock %}</h2>
+                <p class="text-xs text-slate-500 mt-0.5">{% block page_subtitle %}Overview and attendance metrics{% endblock %}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                    <svg class="w-3.5 h-3.5 mr-1 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    Today: {{ today_str }}
+                </span>
+                {% block header_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <!-- Flash Message Floating Toast Container -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="fixed top-5 right-5 z-50 flex flex-col space-y-2.5 max-w-md w-full px-4 sm:px-0">
+                    {% for category, message in messages %}
+                        <div class="toast-item flex items-start p-4 rounded-xl shadow-lg border backdrop-blur-sm transition-all duration-300 {% if category == 'success' %}bg-emerald-50/95 border-emerald-200 text-emerald-900{% elif category == 'error' %}bg-rose-50/95 border-rose-200 text-rose-900{% elif category == 'warning' %}bg-amber-50/95 border-amber-200 text-amber-900{% else %}bg-indigo-50/95 border-indigo-200 text-indigo-900{% endif %}" data-type="{{ category }}">
+                            <div class="flex-shrink-0 mr-3">
+                                {% if category == 'success' %}
+                                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                {% elif category == 'error' %}
+                                    <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                {% elif category == 'warning' %}
+                                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 text-sm font-medium leading-5">
+                                {{ message }}
+                            </div>
+                            <button type="button" class="toast-dismiss-btn ml-3 flex-shrink-0 text-slate-400 hover:text-slate-600" aria-label="Dismiss Alert">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Main Body Content -->
+        <main class="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-500">
+            <div class="flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto space-y-2 sm:space-y-0">
+                <p>Student Attendance Tracker &copy; {{ current_year }}</p>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('reports_view') }}" class="hover:text-brand-600 transition">Defaulters List</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Universal Accessible Confirmation Dialog (<dialog>) -->
+    <dialog id="confirm-dialog" class="rounded-2xl p-0 overflow-hidden shadow-2xl border border-slate-200 max-w-md w-full bg-white text-slate-800 focus:outline-none">
+        <div class="p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="modal-title" class="text-base font-bold text-slate-900">Confirm Action</h3>
+                    <p class="text-xs text-slate-500">Please confirm before proceeding</p>
+                </div>
+            </div>
+            <p id="modal-message" class="text-sm text-slate-600 mb-6 leading-relaxed">
+                Are you sure you want to proceed with this action? This operation cannot be undone.
+            </p>
+            <div class="flex items-center justify-end space-x-3">
+                <button type="button" id="modal-cancel-btn" class="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="button" id="modal-confirm-btn" class="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition shadow-sm">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Custom Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Import Students — Student Attendance Tracker{% endblock %}
+{% block page_title %}Bulk Import Students{% endblock %}
+{% block page_subtitle %}Import student rosters from CSV, TXT, text-based PDF, or Excel spreadsheets{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('students_list') }}" class="inline-flex items-center px-3.5 py-2 text-sm font-medium rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-xs transition">
+    &larr; View Student Directory
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Upload Card -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 p-6">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            
+            <!-- Upload Form -->
+            <div class="flex-1 max-w-xl">
+                <h3 class="text-base font-bold text-slate-900 mb-1">Select File to Import</h3>
+                <p class="text-xs text-slate-500 mb-4">
+                    Supports <strong>.csv</strong>, <strong>.txt</strong> (comma/pipe/tab/key-value), <strong>.pdf</strong> (text-based), and <strong>.xlsx</strong> formats. Max 16MB.
+                </p>
+
+                <form method="POST" action="{{ url_for('import_upload') }}" enctype="multipart/form-data" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                    <div class="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-6 text-center bg-slate-50/50 hover:bg-slate-50 transition cursor-pointer relative">
+                        <input type="file" name="file" required accept=".csv,.txt,.pdf,.xlsx,.xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="document.getElementById('selected-file-label').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
+                        <div class="w-10 h-10 rounded-full bg-brand-100 text-brand-600 mx-auto flex items-center justify-center mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-700 block" id="selected-file-label">
+                            Click or drag file here to upload
+                        </span>
+                        <span class="text-[11px] text-slate-400 block mt-0.5">.csv, .txt, .pdf, or .xlsx</span>
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-lg shadow-sm transition flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Upload & Parse File Preview
+                    </button>
+                </form>
+            </div>
+
+            <!-- Sample Templates Download Box -->
+            <div class="w-full md:w-80 bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex-shrink-0">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download Sample Templates
+                </h4>
+                <p class="text-[11px] text-slate-500 mb-3">
+                    Download sample template files:
+                </p>
+                <div class="space-y-1.5">
+                    <a href="{{ url_for('download_sample', sample_type='csv') }}" class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 hover:text-brand-600 hover:border-brand-300 transition">
+                        <span class="font-medium font-mono text-[11px]">sample_students.csv</span>
+                        <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[10px]">CSV</span>
+                    </a>
+                    <a href="{{ url_for('download_sample', sample_type='pdf') }}" class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 hover:text-brand-600 hover:border-brand-300 transition">
+                        <span class="font-medium font-mono text-[11px]">sample_students.pdf</span>
+                        <span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-semibold text-[10px]">Text PDF</span>
+                    </a>
+                    <a href="{{ url_for('download_sample', sample_type='txt_comma') }}" class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 hover:text-brand-600 hover:border-brand-300 transition">
+                        <span class="font-medium font-mono text-[11px]">sample_students_comma.txt</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px]">TXT</span>
+                    </a>
+                    <a href="{{ url_for('download_sample', sample_type='txt_pipe') }}" class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 hover:text-brand-600 hover:border-brand-300 transition">
+                        <span class="font-medium font-mono text-[11px]">sample_students_pipe.txt</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px]">TXT Pipe</span>
+                    </a>
+                    <a href="{{ url_for('download_sample', sample_type='scanned_pdf') }}" class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 hover:text-brand-600 hover:border-brand-300 transition">
+                        <span class="font-medium font-mono text-[11px]">sample_scanned.pdf (Test Scan)</span>
+                        <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold text-[10px]">Scan Warning</span>
+                    </a>
+                </div>
+
+                <!-- Scanned PDF Note -->
+                <div class="mt-3 pt-3 border-t border-slate-200 text-[11px] text-slate-500 leading-relaxed">
+                    <strong class="text-slate-700">Notice on Scanned PDFs:</strong> Scanned image documents lack selectable text. pypdf extracts digital text only; image scans require OCR.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Staged Preview and Confirmation Section -->
+    {% if staged %}
+        <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+            
+            <!-- Staged File Header and Summary Badges -->
+            <div class="px-6 py-5 border-b border-slate-200 bg-slate-50/50">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 rounded bg-brand-100 text-brand-800 font-mono text-xs font-bold">STAGED</span>
+                            <h3 class="text-base font-bold text-slate-900 font-mono">{{ staged.file_name }}</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Review validated rows below before committing to the SQLite database</p>
+                    </div>
+
+                    <!-- Clear Staged Form -->
+                    <form method="POST" action="{{ url_for('import_clear') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="text-xs text-rose-600 hover:text-rose-800 font-medium px-3 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 transition">
+                            Clear Staged Preview
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 5-Metric Validation Summary -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div class="bg-white rounded-lg p-3 border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-medium block">Total Detected</span>
+                        <span class="text-lg font-bold text-slate-800">{{ staged.summary.total_detected }}</span>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-emerald-200">
+                        <span class="text-[11px] text-emerald-600 font-medium block">Valid (New)</span>
+                        <span class="text-lg font-bold text-emerald-700">{{ staged.summary.valid_count }}</span>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-amber-200">
+                        <span class="text-[11px] text-amber-600 font-medium block">Exists in DB</span>
+                        <span class="text-lg font-bold text-amber-700">{{ staged.summary.duplicate_db_count }}</span>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-rose-200">
+                        <span class="text-[11px] text-rose-600 font-medium block">Duplicates in File</span>
+                        <span class="text-lg font-bold text-rose-700">{{ staged.summary.duplicate_file_count }}</span>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-slate-200">
+                        <span class="text-[11px] text-slate-500 font-medium block">Invalid Rows</span>
+                        <span class="text-lg font-bold text-slate-700">{{ staged.summary.invalid_count }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Execution Form -->
+            <form method="POST" action="{{ url_for('import_confirm') }}" id="confirm-import-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <!-- Toolbar: Selection and Duplicate Strategy -->
+                <div class="px-6 py-3 border-b border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="selectOnlyValidImportRows()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                            Select Only Valid Rows
+                        </button>
+                        <span class="text-xs text-slate-400">|</span>
+                        <span class="text-xs text-slate-600">
+                            Selected for import: <strong id="selected-import-count" class="text-brand-600">{{ staged.summary.ready_to_import }}</strong>
+                        </span>
+                    </div>
+
+                    <!-- Duplicate Handling Options -->
+                    <div class="flex items-center space-x-2">
+                        <label for="duplicate_action" class="text-xs font-semibold text-slate-700 whitespace-nowrap">
+                            For Existing Rolls:
+                        </label>
+                        <select name="duplicate_action" id="duplicate_action" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="skip" selected>Skip (Keep original data)</option>
+                            <option value="update">Update (Overwrite name & class)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Preview Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 text-xs uppercase font-semibold">
+                                <th class="px-6 py-3 w-12 text-center">
+                                    <input type="checkbox" id="select-all-import-rows" class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4" checked title="Select / Deselect All">
+                                </th>
+                                <th class="px-6 py-3">Roll Number</th>
+                                <th class="px-6 py-3">Full Name</th>
+                                <th class="px-6 py-3">Class</th>
+                                <th class="px-6 py-3">Section</th>
+                                <th class="px-6 py-3">Validation Status</th>
+                                <th class="px-6 py-3">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/70 text-slate-700">
+                            {% for rec in staged.records %}
+                                <tr class="hover:bg-slate-50/70 transition {% if not rec.selected %}opacity-70 bg-slate-50/30{% endif %}">
+                                    <td class="px-6 py-3.5 text-center">
+                                        <input type="checkbox" name="selected_row" value="{{ rec.id }}" class="import-row-checkbox rounded text-brand-600 focus:ring-brand-500 h-4 w-4" data-status="{{ rec.status_code }}" {% if rec.selected %}checked{% endif %}>
+                                    </td>
+                                    <td class="px-6 py-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                        {{ rec.roll_no if rec.roll_no else '—' }}
+                                    </td>
+                                    <td class="px-6 py-3.5 font-medium text-slate-800">
+                                        {{ rec.name if rec.name else '—' }}
+                                    </td>
+                                    <td class="px-6 py-3.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                            {{ rec.class_name if rec.class_name else '—' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-3.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
+                                            {{ rec.section if rec.section else '—' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-3.5 whitespace-nowrap">
+                                        {% if rec.status_code == 'VALID' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                                                Valid
+                                            </span>
+                                        {% elif rec.status_code == 'DUP_DB' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                                                Exists in DB
+                                            </span>
+                                        {% elif rec.status_code == 'DUP_FILE' %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                                                Duplicate in File
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                                                {{ rec.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-3.5 text-xs text-slate-500">
+                                        {{ rec.details }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Commit Bar -->
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <p class="text-xs text-slate-500">
+                        Selected rows will be inserted in an atomic SQLite transaction.
+                    </p>
+                    <div class="flex items-center space-x-3">
+                        <button type="submit" class="px-6 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition flex items-center">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Confirm & Execute Import
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+            <!-- Collapsible: Unparsed Lines Inspector (if any) -->
+            {% if staged.unparsed_items %}
+                <details class="border-t border-slate-200 px-6 py-3 bg-slate-50/30">
+                    <summary class="text-xs font-semibold text-slate-700 cursor-pointer hover:text-brand-600">
+                        View Unparsed Lines ({{ staged.unparsed_items|length }} lines skipped)
+                    </summary>
+                    <div class="mt-3 space-y-2 text-xs font-mono bg-slate-100 p-3 rounded-lg border border-slate-200">
+                        {% for item in staged.unparsed_items %}
+                            <div class="text-slate-600">
+                                <span class="text-slate-400 font-bold">Line {{ item.line_num }}:</span> {{ item.text }}
+                                <span class="text-rose-500 font-normal">({{ item.reason }})</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endif %}
+
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

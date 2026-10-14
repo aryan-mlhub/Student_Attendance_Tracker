@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}500 Internal Server Error — Student Attendance Tracker{% endblock %}
+{% block page_title %}Internal Server Error{% endblock %}
+{% block page_subtitle %}An unexpected error occurred while processing your request{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white rounded-2xl shadow-xs border border-slate-200/80 p-8 text-center my-12">
+    <div class="w-16 h-16 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center font-bold text-2xl mb-4 font-mono">
+        500
+    </div>
+    <h3 class="text-lg font-bold text-slate-900">Application Error</h3>
+    <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+        The server encountered an error while executing your request. All transactions have been rolled back safely.
+    </p>
+    {% if error_message %}
+        <div class="mt-4 p-3 bg-slate-100 rounded-lg text-left text-xs font-mono text-slate-700 overflow-x-auto">
+            {{ error_message }}
+        </div>
+    {% endif %}
+    <div class="mt-6">
+        <a href="{{ url_for('dashboard') }}" class="px-5 py-2 text-sm font-semibold rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">
+            Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

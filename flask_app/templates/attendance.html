@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Mark Attendance — Student Attendance Tracker{% endblock %}
+{% block page_title %}Mark Attendance Sheet{% endblock %}
+{% block page_subtitle %}Record daily student attendance, update past dates, or apply bulk actions{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Filters & Date Selection Bar -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 p-4">
+        <form method="GET" action="{{ url_for('attendance_mark') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            
+            <!-- Date Picker -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Attendance Date</label>
+                <input type="date" name="date" value="{{ selected_date }}" max="{{ today_str }}" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Class Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Class / Department</label>
+                <select name="class_name" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Classes</option>
+                    {% for c in distinct_classes %}
+                        <option value="{{ c }}" {% if class_filter == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Section Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Section</label>
+                <select name="section" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Sections</option>
+                    {% for s in distinct_sections %}
+                        <option value="{{ s }}" {% if section_filter == s %}selected{% endif %}>Section {{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Search Inside Sheet -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Filter Students</label>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Filter by roll or name..." class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Submit Filter Button -->
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="flex-1 py-1.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-xs transition">
+                    Load Sheet
+                </button>
+                {% if class_filter or section_filter or search_query or selected_date != today_str %}
+                    <a href="{{ url_for('attendance_mark') }}" class="p-2 text-slate-500 hover:text-slate-800 border border-slate-300 rounded-lg bg-slate-50" title="Reset Filters">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Overwrite Warning Banner if records already exist -->
+    {% if has_records %}
+        <div class="bg-amber-50 border-l-4 border-amber-500 rounded-xl p-4 shadow-xs flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider">Historical Records Detected</h4>
+                    <p class="text-xs text-amber-700">
+                        Attendance has already been recorded for <strong>{{ recorded_count }} student(s)</strong> on <strong>{{ selected_date }}</strong>. Any changes submitted now will update the existing records.
+                    </p>
+                </div>
+            </div>
+            <span class="hidden sm:inline-block px-2.5 py-1 text-[11px] font-mono font-semibold bg-amber-100 text-amber-800 rounded-md">
+                Historical Edit Mode
+            </span>
+        </div>
+    {% endif %}
+
+    <!-- Attendance Sheet Form -->
+    {% if sheet %}
+        <form id="attendance-form" method="POST" action="{{ url_for('attendance_mark') }}" data-has-records="{{ 'true' if has_records else 'false' }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="attendance_date" value="{{ selected_date }}">
+            <input type="hidden" name="class_name" value="{{ class_filter }}">
+            <input type="hidden" name="section" value="{{ section_filter }}">
+
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+                
+                <!-- Action Controls Header -->
+                <div class="px-6 py-4 border-b border-slate-200/80 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">
+                            Attendance Roster ({{ sheet|length }} Students)
+                        </h3>
+                        <p class="text-xs text-slate-500">Date: <span class="font-mono font-semibold text-slate-700">{{ selected_date }}</span></p>
+                    </div>
+
+                    <!-- Bulk Marking Buttons -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-500 mr-1">Bulk Actions:</span>
+                        <button type="button" onclick="markAllAttendance('Present')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition">
+                            Mark All Present
+                        </button>
+                        <button type="button" onclick="markAllAttendance('Absent')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition">
+                            Mark All Absent
+                        </button>
+                        <button type="button" onclick="markAllAttendance('Leave')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition">
+                            Mark All Leave
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Student List & Status Selection Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 text-xs uppercase font-semibold">
+                                <th class="px-6 py-3.5 w-12 text-center">#</th>
+                                <th class="px-6 py-3.5">Roll Number</th>
+                                <th class="px-6 py-3.5">Student Name</th>
+                                <th class="px-6 py-3.5">Class & Section</th>
+                                <th class="px-6 py-3.5 text-center">Attendance Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/70 text-slate-700">
+                            {% for item in sheet %}
+                                <tr class="hover:bg-slate-50/70 transition">
+                                    <td class="px-6 py-4 text-center text-xs text-slate-400 font-mono">
+                                        {{ loop.index }}
+                                    </td>
+                                    <td class="px-6 py-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                        {{ item.roll_no }}
+                                        <input type="hidden" name="student_id" value="{{ item.student_id }}">
+                                    </td>
+                                    <td class="px-6 py-4 font-medium text-slate-800">
+                                        {{ item.name }}
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                            {{ item.class_name if item.class_name else '—' }} {% if item.section %}({{ item.section }}){% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <!-- Accessible Radio Group with Color-coded pills -->
+                                        <div class="attendance-pill-group flex items-center justify-center space-x-2">
+                                            
+                                            <!-- Present Radio -->
+                                            <label class="attendance-pill relative flex items-center px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition select-none has-[:checked]:bg-emerald-600 has-[:checked]:text-white has-[:checked]:border-emerald-600 border-slate-200 text-slate-600 hover:bg-emerald-50">
+                                                <input type="radio" name="status_{{ item.student_id }}" value="Present" class="sr-only" {% if item.status == 'Present' or (not item.status and loop.first and False) %}checked{% endif %}>
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 group-has-[:checked]:bg-white"></span>
+                                                Present
+                                            </label>
+
+                                            <!-- Absent Radio -->
+                                            <label class="attendance-pill relative flex items-center px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition select-none has-[:checked]:bg-rose-600 has-[:checked]:text-white has-[:checked]:border-rose-600 border-slate-200 text-slate-600 hover:bg-rose-50">
+                                                <input type="radio" name="status_{{ item.student_id }}" value="Absent" class="sr-only" {% if item.status == 'Absent' %}checked{% endif %}>
+                                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
+                                                Absent
+                                            </label>
+
+                                            <!-- Leave Radio -->
+                                            <label class="attendance-pill relative flex items-center px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition select-none has-[:checked]:bg-amber-500 has-[:checked]:text-white has-[:checked]:border-amber-500 border-slate-200 text-slate-600 hover:bg-amber-50">
+                                                <input type="radio" name="status_{{ item.student_id }}" value="Leave" class="sr-only" {% if item.status == 'Leave' %}checked{% endif %}>
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5"></span>
+                                                Leave
+                                            </label>
+
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Save Action Bar -->
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <p class="text-xs text-slate-500">
+                        Attendance will be securely saved into SQLite database.
+                    </p>
+                    <div class="flex items-center space-x-3">
+                        <a href="{{ url_for('dashboard') }}" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition">
+                            Cancel
+                        </a>
+                        <button type="submit" id="save-attendance-btn" class="px-6 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition flex items-center">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Attendance Record
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    {% else %}
+        <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 p-12 text-center">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-800">No students match the selected roster criteria</h4>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                No registered students match class "{{ class_filter }}" and section "{{ section_filter }}". Try clearing the filters or enrolling students.
+            </p>
+            <div class="mt-4 flex items-center justify-center space-x-3">
+                <a href="{{ url_for('attendance_mark') }}" class="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                    Reset Filters
+                </a>
+                <a href="{{ url_for('student_add') }}" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-xs">
+                    Enroll Student
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const attendanceForm = document.getElementById("attendance-form");
+        if (attendanceForm) {
+            attendanceForm.addEventListener("submit", (e) => {
+                const hasExisting = attendanceForm.getAttribute("data-has-records") === "true";
+                if (hasExisting) {
+                    e.preventDefault();
+                    window.openConfirmModal(
+                        "Overwrite Existing Attendance?",
+                        "Attendance for this date and class already exists in the database. Are you sure you want to overwrite and update the existing records?",
+                        "Yes, Overwrite Records",
+                        "bg-amber-600 hover:bg-amber-700 focus:ring-amber-500",
+                        () => attendanceForm.submit()
+                    );
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Students Directory — Student Attendance Tracker{% endblock %}
+{% block page_title %}Student Directory{% endblock %}
+{% block page_subtitle %}Manage enrollment, search by roll number or name, and inspect attendance history{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center space-x-2">
+    <a href="{{ url_for('bulk_import') }}" class="inline-flex items-center px-3.5 py-2 text-sm font-medium rounded-lg text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-xs transition">
+        <svg class="w-4 h-4 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+        </svg>
+        Bulk Import
+    </a>
+    <a href="{{ url_for('student_add') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
+        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        Add Student
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+    <!-- Filters, Search, and Sort Bar -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 p-4">
+        <form method="GET" action="{{ url_for('students_list') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            
+            <!-- Search Query -->
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Search Student</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </span>
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Roll Number or Full Name..." class="w-full pl-9 pr-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                </div>
+            </div>
+
+            <!-- Class Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Class / Branch</label>
+                <select name="class_name" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Classes</option>
+                    {% for c in distinct_classes %}
+                        <option value="{{ c }}" {% if class_filter == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Section Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Section</label>
+                <select name="section" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Sections</option>
+                    {% for s in distinct_sections %}
+                        <option value="{{ s }}" {% if section_filter == s %}selected{% endif %}>Section {{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Sort By & Action Button -->
+            <div class="flex items-end space-x-2">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sort By</label>
+                    <select name="sort_by" class="w-full px-2 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="roll_no" {% if sort_by == 'roll_no' %}selected{% endif %}>Roll Number</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
+                        <option value="class_name" {% if sort_by == 'class_name' %}selected{% endif %}>Class</option>
+                        <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Enrollment Date</option>
+                    </select>
+                </div>
+                <button type="submit" class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-xs transition">
+                    Filter
+                </button>
+                {% if search_query or class_filter or section_filter or sort_by != 'roll_no' %}
+                    <a href="{{ url_for('students_list') }}" class="p-2 text-slate-500 hover:text-slate-800 border border-slate-300 rounded-lg bg-slate-50" title="Reset Filters">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </a>
+                {% endif %}
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Students Table Panel -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Registered Students</h3>
+                <p class="text-xs text-slate-500">Showing {{ students|length }} of {{ total_items }} total student records</p>
+            </div>
+            <div class="text-xs font-mono text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
+                Page {{ page }} of {{ total_pages }}
+            </div>
+        </div>
+
+        {% if students %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80 text-xs uppercase font-semibold">
+                            <th class="px-6 py-3.5">Roll Number</th>
+                            <th class="px-6 py-3.5">Full Name</th>
+                            <th class="px-6 py-3.5">Class / Department</th>
+                            <th class="px-6 py-3.5">Section</th>
+                            <th class="px-6 py-3.5">Enrolled On</th>
+                            <th class="px-6 py-3.5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/70 text-slate-700">
+                        {% for s in students %}
+                            <tr class="hover:bg-slate-50/60 transition group">
+                                <td class="px-6 py-4 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                                    <a href="{{ url_for('student_history', student_id=s.id) }}" class="text-brand-600 hover:text-brand-800 hover:underline">
+                                        {{ s.roll_no }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 font-medium text-slate-800">
+                                    <div class="flex items-center space-x-2.5">
+                                        <div class="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs uppercase">
+                                            {{ s.name[:1] }}
+                                        </div>
+                                        <span>{{ s.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                                        {{ s.class_name if s.class_name else '—' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">
+                                        {{ s.section if s.section else '—' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-xs text-slate-500 font-mono">
+                                    {{ s.created_at[:10] if s.created_at else '—' }}
+                                </td>
+                                <td class="px-6 py-4 text-right space-x-1 whitespace-nowrap">
+                                    <!-- View History Profile -->
+                                    <a href="{{ url_for('student_history', student_id=s.id) }}" class="inline-flex items-center p-1.5 text-slate-600 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition" title="View Attendance History">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                    </a>
+
+                                    <!-- Edit -->
+                                    <a href="{{ url_for('student_edit', student_id=s.id) }}" class="inline-flex items-center p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition" title="Edit Student">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                        </svg>
+                                    </a>
+
+                                    <!-- Delete with Confirmation Dialog -->
+                                    <form method="POST" action="{{ url_for('student_delete', student_id=s.id) }}" class="inline-block confirm-delete-form" data-item-name="{{ s.name }} ({{ s.roll_no }})">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Delete Student">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            {% if total_pages > 1 %}
+                <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                    <span class="text-xs text-slate-500">
+                        Page {{ page }} of {{ total_pages }} ({{ total_items }} students)
+                    </span>
+                    <div class="flex items-center space-x-1">
+                        {% if page > 1 %}
+                            <a href="{{ url_for('students_list', page=page-1, search=search_query, class_name=class_filter, section=section_filter, sort_by=sort_by, sort_order=sort_order) }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                                Previous
+                            </a>
+                        {% endif %}
+
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                                <span class="px-3 py-1.5 text-xs font-bold rounded-lg bg-brand-600 text-white">
+                                    {{ p }}
+                                </span>
+                            {% elif p <= 5 or p >= total_pages - 1 or (p >= page - 1 and p <= page + 1) %}
+                                <a href="{{ url_for('students_list', page=p, search=search_query, class_name=class_filter, section=section_filter, sort_by=sort_by, sort_order=sort_order) }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                                    {{ p }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page < total_pages %}
+                            <a href="{{ url_for('students_list', page=page+1, search=search_query, class_name=class_filter, section=section_filter, sort_by=sort_by, sort_order=sort_order) }}" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+                                Next
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+        {% else %}
+            <div class="p-12 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-sm font-semibold text-slate-800">No student records found</h4>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    {% if search_query or class_filter or section_filter %}
+                        No students match the selected filter criteria. Try clearing filters or searching another query.
+                    {% else %}
+                        No students have been registered in the database yet. Click below to add a student or import via CSV/TXT/PDF.
+                    {% endif %}
+                </p>
+                <div class="mt-4 flex items-center justify-center space-x-3">
+                    {% if search_query or class_filter or section_filter %}
+                        <a href="{{ url_for('students_list') }}" class="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                            Clear Filters
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('student_add') }}" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-xs">
+                        Add New Student
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

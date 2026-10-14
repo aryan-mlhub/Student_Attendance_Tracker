@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Reports & Defaulters — Student Attendance Tracker{% endblock %}
+{% block page_title %}Attendance Analytics & Reports{% endblock %}
+{% block page_subtitle %}Aggregate metrics, date-range calculations, defaulter thresholds, and CSV export{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('reports_export_csv', class_name=class_filter, section=section_filter, start_date=start_date, end_date=end_date, search=search_query, only_defaulters=1 if only_defaulters else 0) }}" class="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition">
+    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    Export Report CSV
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Formula Clarification Banner -->
+    <div class="bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-indigo-900">
+        <div class="flex items-start space-x-3">
+            <div class="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <span class="font-bold uppercase tracking-wider block">Attendance Calculation Formula:</span>
+                <span class="font-mono text-indigo-950 font-semibold">Attendance % = [ Present Days / (Present Days + Absent Days) ] &times; 100</span>
+                <p class="text-indigo-700 mt-0.5">Approved leave days are excluded from the denominator. Low attendance threshold is 75.0%.</p>
+            </div>
+        </div>
+        <div class="flex-shrink-0 flex items-center space-x-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                &ge; 75%: Satisfactory
+            </span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-800">
+                &lt; 75%: Defaulter
+            </span>
+        </div>
+    </div>
+
+    <!-- Filter Controls Bar -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 p-4">
+        <form method="GET" action="{{ url_for('reports_view') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            
+            <!-- Date Range From -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">From Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Date Range To -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">To Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Class Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Class</label>
+                <select name="class_name" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Classes</option>
+                    {% for c in distinct_classes %}
+                        <option value="{{ c }}" {% if class_filter == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Section Filter -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Section</label>
+                <select name="section" class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">All Sections</option>
+                    {% for s in distinct_sections %}
+                        <option value="{{ s }}" {% if section_filter == s %}selected{% endif %}>Section {{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Search by Name/Roll -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Search Student</label>
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Roll or Name..." class="w-full px-3 py-1.5 text-sm bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            </div>
+
+            <!-- Actions and Defaulter Checkbox -->
+            <div class="flex flex-col justify-end space-y-2">
+                <div class="flex items-center space-x-1.5">
+                    <input type="checkbox" id="only_defaulters" name="only_defaulters" value="1" {% if only_defaulters %}checked{% endif %} class="rounded text-rose-600 focus:ring-rose-500 h-4 w-4">
+                    <label for="only_defaulters" class="text-xs font-bold text-rose-700 cursor-pointer select-none">
+                        Only &lt; 75% Defaulters
+                    </label>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <button type="submit" class="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xs transition">
+                        Apply
+                    </button>
+                    {% if start_date or end_date or class_filter or section_filter or search_query or only_defaulters %}
+                        <a href="{{ url_for('reports_view') }}" class="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-300 rounded-lg bg-slate-50" title="Reset Filters">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Aggregated Metrics 5-Card Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div class="bg-white rounded-xl p-4 shadow-xs border border-slate-200/80">
+            <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Students In View</span>
+            <p class="text-2xl font-bold text-slate-900 mt-1">{{ total_students_in_view }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-xs border border-emerald-100">
+            <span class="text-xs font-medium text-emerald-600 uppercase tracking-wider">Total Present Days</span>
+            <p class="text-2xl font-bold text-emerald-700 mt-1">{{ total_present }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-xs border border-rose-100">
+            <span class="text-xs font-medium text-rose-600 uppercase tracking-wider">Total Absent Days</span>
+            <p class="text-2xl font-bold text-rose-700 mt-1">{{ total_absent }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-xs border border-amber-100">
+            <span class="text-xs font-medium text-amber-600 uppercase tracking-wider">Total Leave Days</span>
+            <p class="text-2xl font-bold text-amber-700 mt-1">{{ total_leave }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-xs border border-rose-100 col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-rose-600 uppercase tracking-wider">Defaulters (&lt;75%)</span>
+            <p class="text-2xl font-bold text-rose-700 mt-1">{{ defaulters_count }}</p>
+        </div>
+    </div>
+
+    <!-- Report Table Panel -->
+    <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200/80 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Attendance Report Data</h3>
+                <p class="text-xs text-slate-500">
+                    Showing metrics for {{ report_data|length }} student record(s)
+                    {% if only_defaulters %}<span class="text-rose-600 font-semibold">(Filtered to Defaulters Only)</span>{% endif %}
+                </p>
+            </div>
+            <a href="{{ url_for('reports_export_csv', class_name=class_filter, section=section_filter, start_date=start_date, end_date=end_date, search=search_query, only_defaulters=1 if only_defaulters else 0) }}" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center">
+                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Download CSV
+            </a>
+        </div>
+
+        {% if report_data %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80 text-xs uppercase font-semibold">
+                            <th class="px-6 py-3.5">Roll Number</th>
+                            <th class="px-6 py-3.5">Student Name</th>
+                            <th class="px-6 py-3.5">Class & Section</th>
+                            <th class="px-6 py-3.5 text-center">Total Sessions</th>
+                            <th class="px-6 py-3.5 text-center text-emerald-600">Present</th>
+                            <th class="px-6 py-3.5 text-center text-rose-600">Absent</th>
+                            <th class="px-6 py-3.5 text-center text-amber-600">Leave</th>
+                            <th class="px-6 py-3.5 text-center">Attendance %</th>
+                            <th class="px-6 py-3.5 text-center">Status</th>
+                            <th class="px-6 py-3.5 text-right">Profile</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200/70 text-slate-700">
+                        {% for row in report_data %}
+                            <tr class="hover:bg-slate-50/60 transition {% if row.is_low %}bg-rose-50/20{% endif %}">
+                                <td class="px-6 py-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                    <a href="{{ url_for('student_history', student_id=row.student_id) }}" class="text-brand-600 hover:text-brand-800 hover:underline">
+                                        {{ row.roll_no }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 font-medium text-slate-800 whitespace-nowrap">
+                                    {{ row.name }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                        {{ row.class_name if row.class_name else '—' }} {% if row.section %}({{ row.section }}){% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center font-mono font-semibold text-slate-700">{{ row.total_days }}</td>
+                                <td class="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{{ row.present_days }}</td>
+                                <td class="px-6 py-4 text-center font-mono font-semibold text-rose-600">{{ row.absent_days }}</td>
+                                <td class="px-6 py-4 text-center font-mono font-semibold text-amber-600">{{ row.leave_days }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold font-mono {% if row.percentage >= deficit_threshold %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                        {{ row.percentage }}%
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center whitespace-nowrap">
+                                    {% if row.is_low %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-600 text-white">
+                                            DEFICIT (&lt;75%)
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            Satisfactory
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 text-right whitespace-nowrap">
+                                    <a href="{{ url_for('student_history', student_id=row.student_id) }}" class="inline-flex items-center text-xs font-semibold text-brand-600 hover:text-brand-800">
+                                        Inspect
+                                        <svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-sm font-semibold text-slate-800">No report records found</h4>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    No student records meet the filter criteria.
+                </p>
+                <div class="mt-4">
+                    <a href="{{ url_for('reports_view') }}" class="px-3.5 py-1.5 text-xs font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700">
+                        Reset All Filters
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
