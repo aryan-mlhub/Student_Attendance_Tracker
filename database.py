@@ -17,11 +17,21 @@ import shutil
 import sqlite3
 from pathlib import Path
 from datetime import datetime, date
-from typing import Any, List, Optional, Dict, Set
+from typing import Any, List, Optional, Dict, Set, Tuple
 from contextlib import contextmanager
 
-# Third-party document parsing dependencies
-import pypdf
+try:
+    import psycopg2
+    import psycopg2.extras
+    HAS_PSYCOPG2 = True
+except ImportError:
+    HAS_PSYCOPG2 = False
+
+try:
+    import pypdf
+    HAS_PYPDF = True
+except ImportError:
+    HAS_PYPDF = False
 
 try:
     import openpyxl
@@ -62,23 +72,123 @@ HEADER_ALIASES = {
 }
 
 
-class Database:
-    """Manages SQLite database connections, schema creation, and transactions."""
+class QueryCompatCursor:
+    """Cursor wrapper that transparently adapts SQL queries between SQLite and PostgreSQL."""
 
-    def __init__(self, db_path: Optional[str | Path] = None):
-        if db_path:
-            self.db_path = Path(db_path)
+    def __init__(self, raw_cursor, is_postgres: bool):
+        self.raw_cursor = raw_cursor
+        self.is_postgres = is_postgres
+        self._last_inserted_id = None
+
+    def _format(self, query: str) -> str:
+        if self.is_postgres:
+            # Replace SQLite ? placeholder with PostgreSQL %s placeholder
+            formatted = query.replace("?", "%s")
+            # Remove SQLite-specific COLLATE NOCASE
+            formatted = re.sub(r"\s+COLLATE\s+NOCASE", "", formatted, flags=re.IGNORECASE)
+            return formatted
+        return query
+
+    def execute(self, query: str, params: Tuple[Any, ...] = ()):
+        formatted = self._format(query)
+        if self.is_postgres:
+            is_insert = formatted.strip().upper().startswith("INSERT INTO STUDENTS")
+            if is_insert and "RETURNING" not in formatted.upper():
+                formatted = formatted.rstrip("; ") + " RETURNING id;"
+                self.raw_cursor.execute(formatted, params)
+                res = self.raw_cursor.fetchone()
+                if res:
+                    self._last_inserted_id = res.get("id") if isinstance(res, dict) else res[0]
+                return
+            return self.raw_cursor.execute(formatted, params)
         else:
-            self.db_path = DEFAULT_DB_PATH
+            return self.raw_cursor.execute(formatted, params)
+
+    def executemany(self, query: str, params_seq):
+        formatted = self._format(query)
+        return self.raw_cursor.executemany(formatted, params_seq)
+
+    @property
+    def lastrowid(self):
+        if self.is_postgres:
+            return self._last_inserted_id
+        return getattr(self.raw_cursor, "lastrowid", None)
+
+    def __getattr__(self, name):
+        return getattr(self.raw_cursor, name)
+
+
+class CompatConnection:
+    """Connection wrapper that returns QueryCompatCursor and supports context management."""
+
+    def __init__(self, raw_conn, is_postgres: bool):
+        self.raw_conn = raw_conn
+        self.is_postgres = is_postgres
+
+    def cursor(self, *args, **kwargs):
+        if self.is_postgres:
+            if "cursor_factory" not in kwargs:
+                kwargs["cursor_factory"] = psycopg2.extras.RealDictCursor
+        raw_cur = self.raw_conn.cursor(*args, **kwargs)
+        return QueryCompatCursor(raw_cur, self.is_postgres)
+
+    def commit(self):
+        return self.raw_conn.commit()
+
+    def rollback(self):
+        return self.raw_conn.rollback()
+
+    def close(self):
+        return self.raw_conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.rollback()
+        else:
+            self.commit()
+
+    def __getattr__(self, name):
+        return getattr(self.raw_conn, name)
+
+
+class Database:
+    """Manages database connections (PostgreSQL in production, SQLite in local development),
+    schema creation, and atomic transactions."""
+
+    def __init__(self, db_path: Optional[str | Path] = None, database_url: Optional[str] = None):
+        self.database_url = database_url or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+        self.is_postgres = False
+        self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
+
+        if self.database_url and HAS_PSYCOPG2:
+            norm_url = self.database_url
+            if norm_url.startswith("postgres://"):
+                norm_url = "postgresql://" + norm_url[len("postgres://"):]
+            self.database_url = norm_url
+            try:
+                test_conn = psycopg2.connect(self.database_url, connect_timeout=5)
+                test_conn.close()
+                self.is_postgres = True
+                print("Connected to PostgreSQL database for production data persistence.")
+            except Exception as e:
+                print(f"Notice: PostgreSQL connection unavailable ({e}). Falling back to local SQLite.")
+                self.is_postgres = False
 
         self.initialize_schema()
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Create a connection with foreign keys enabled and row factory configured."""
-        conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.row_factory = sqlite3.Row
-        return conn
+    def get_connection(self) -> CompatConnection:
+        """Create a connection with compatible row dictionary access and foreign keys."""
+        if self.is_postgres:
+            raw_conn = psycopg2.connect(self.database_url)
+            return CompatConnection(raw_conn, is_postgres=True)
+        else:
+            raw_conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+            raw_conn.execute("PRAGMA foreign_keys = ON;")
+            raw_conn.row_factory = sqlite3.Row
+            return CompatConnection(raw_conn, is_postgres=False)
 
     @contextmanager
     def transaction(self):
@@ -94,49 +204,68 @@ class Database:
             conn.close()
 
     def initialize_schema(self) -> None:
-        """Create tables and indexes if they do not exist, or copy existing db if present."""
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
-
-        with self.transaction() as conn:
-            cursor = conn.cursor()
-
-            # Students Table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS students (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    roll_no TEXT UNIQUE NOT NULL COLLATE NOCASE,
-                    name TEXT NOT NULL,
-                    class_name TEXT DEFAULT '',
-                    section TEXT DEFAULT '',
-                    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-                );
-            """)
-
-            # Attendance Table
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS attendance (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    student_id INTEGER NOT NULL,
-                    attendance_date TEXT NOT NULL,
-                    status TEXT NOT NULL CHECK(status IN ('Present', 'Absent', 'Leave')),
-                    UNIQUE(student_id, attendance_date),
-                    FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
-                );
-            """)
-
-            # Performance Indexes
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_roll_no ON students(roll_no);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_class_sec ON students(class_name, section);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);")
+        """Create tables and indexes if they do not exist."""
+        if self.is_postgres:
+            with self.transaction() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS students (
+                        id SERIAL PRIMARY KEY,
+                        roll_no VARCHAR(100) UNIQUE NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        class_name VARCHAR(100) DEFAULT '',
+                        section VARCHAR(50) DEFAULT '',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS attendance (
+                        id SERIAL PRIMARY KEY,
+                        student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                        attendance_date VARCHAR(20) NOT NULL,
+                        status VARCHAR(20) NOT NULL CHECK(status IN ('Present', 'Absent', 'Leave')),
+                        UNIQUE(student_id, attendance_date)
+                    );
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_roll_no ON students(roll_no);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_class_sec ON students(class_name, section);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);")
+        else:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.transaction() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS students (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        roll_no TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                        name TEXT NOT NULL,
+                        class_name TEXT DEFAULT '',
+                        section TEXT DEFAULT '',
+                        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+                    );
+                """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS attendance (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        student_id INTEGER NOT NULL,
+                        attendance_date TEXT NOT NULL,
+                        status TEXT NOT NULL CHECK(status IN ('Present', 'Absent', 'Leave')),
+                        UNIQUE(student_id, attendance_date),
+                        FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
+                    );
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_roll_no ON students(roll_no);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_class_sec ON students(class_name, section);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);")
 
     def execute_query(self, query: str, params: Tuple[Any, ...] = ()) -> int:
-        """Execute an INSERT/UPDATE/DELETE query and return lastrowid."""
+        """Execute an INSERT/UPDATE/DELETE query and return lastrowid (or inserted ID)."""
         with self.transaction() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params)
-            return cursor.lastrowid
+            return cursor.lastrowid or 0
 
     def fetch_all(self, query: str, params: Tuple[Any, ...] = ()) -> List[Dict[str, Any]]:
         """Execute a SELECT query and return all rows as dictionaries."""
@@ -1048,8 +1177,9 @@ class AttendanceManager:
                     """, (student_id, date_str, status))
                 else:
                     cursor.execute("""
-                        INSERT OR IGNORE INTO attendance (student_id, attendance_date, status)
-                        VALUES (?, ?, ?);
+                        INSERT INTO attendance (student_id, attendance_date, status)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (student_id, attendance_date) DO NOTHING;
                     """, (student_id, date_str, status))
 
                 saved_count += 1

@@ -28,6 +28,7 @@ from flask import (
     Response,
     abort,
 )
+from werkzeug.utils import secure_filename
 
 from database import (
     Database,
@@ -44,8 +45,6 @@ from database import (
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
-app.config["UPLOAD_FOLDER"] = Path(__file__).resolve().parent / "static" / "uploads"
-app.config["UPLOAD_FOLDER"].mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".csv", ".txt", ".pdf", ".xlsx", ".xls"}
 
