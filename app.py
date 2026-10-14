@@ -90,6 +90,8 @@ def inject_global_vars():
 # ---------------------------------------------------------------------
 
 @app.route("/")
+@app.route("/api")
+@app.route("/api/index")
 def index():
     """Redirect root path to the Dashboard."""
     return redirect(url_for("dashboard"))
