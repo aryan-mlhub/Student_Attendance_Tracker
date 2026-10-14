@@ -16,8 +16,8 @@ import re
 import shutil
 import sqlite3
 from pathlib import Path
-from datetime import datetime, date, timedelta
-from typing import Any, List, Tuple, Optional, Dict, Set
+from datetime import datetime, date
+from typing import Any, List, Optional, Dict, Set
 from contextlib import contextmanager
 
 # Third-party document parsing dependencies

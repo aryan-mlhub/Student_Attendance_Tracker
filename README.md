@@ -101,18 +101,28 @@ Faculty members can add an entire class roster in seconds instead of keying in s
 
 ```text
 StudentAttendanceTracker/
-├── main.py                     # Main application entry point & navigation controller
-├── database.py                 # SQLite database layer, schema & atomic transactions
-├── student_manager.py          # Student CRUD, live filtering, and duplicate validation
-├── attendance_manager.py       # Attendance recording, stats, and historical queries
-├── bulk_import.py              # 5-step bulk import engine, validation & transactional commit
-├── pdf_parser.py               # PDF text extraction, layout parsing & scanned PDF detector
-├── reports.py                  # Analytics engine, 75% defaulter detection & CSV export
-├── requirements.txt            # Python dependencies (pypdf, openpyxl)
+├── main.py                     # Self-contained Desktop Tkinter application & SQLite engine
+├── requirements.txt            # Repository dependencies
 ├── README.md                   # Complete documentation and user manual
 ├── .gitignore                  # Git exclusions for database and temporary files
 │
-├── templates/                  # Sample templates and generators
+├── flask_app/                  # 🌐 Full-Stack Flask Web Application (Tailwind CSS + Jinja2)
+│   ├── app.py                  # Flask server, route controllers & REST endpoints
+│   ├── database.py             # SQLite database layer, managers, parsers & reporting
+│   ├── requirements.txt        # Flask web application dependencies
+│   ├── vercel.json             # Vercel serverless deployment configuration
+│   ├── README.md               # Flask documentation and setup guide
+│   ├── templates/              # Jinja2 HTML templates
+│   └── static/                 # Tailwind custom CSS, vanilla JS, and sample templates
+│
+├── streamlit_app/              # 🎈 Interactive Streamlit Web Application
+│   ├── app.py                  # Streamlit web UI & interactive controllers
+│   ├── backend.py              # Pure Python decoupled business logic & SQLite layer
+│   ├── requirements.txt        # Streamlit web app dependencies
+│   ├── README.md               # Streamlit deployment documentation
+│   └── templates/              # Sample CSV, TXT, and PDF templates
+│
+├── templates/                  # Sample templates and test fixtures
 │   ├── sample_students.csv     # Sample CSV class list
 │   ├── sample_students_pipe.txt# Sample TXT with pipe-separated records
 │   ├── sample_students_comma.txt# Sample TXT with comma-delimited records
@@ -120,17 +130,10 @@ StudentAttendanceTracker/
 │   ├── sample_scanned.pdf      # Textless sample PDF to test scanned document detection
 │   └── generate_sample_pdf.py  # Utility script to generate sample test PDFs
 │
-├── ui/                         # Modular User Interface
-│   ├── styles.py               # Modern Navy & Slate design system, tokens & ttk styles
-│   ├── components.py           # StatCard, CustomTable with sorting, and modal dialogs
-│   └── views/
-│       ├── dashboard_view.py   # Overview metrics, date switcher, and recent activity
-│       ├── students_view.py    # Student directory, search, and CRUD
-│       ├── import_view.py      # Guided bulk import wizard with preview table
-│       ├── attendance_view.py  # Class attendance sheet with quick toggles
-│       └── reports_view.py     # Attendance summaries, defaulter alert & CSV export
-│
-└── tests/                      # Automated test suite (25 tests)
+└── tests/                      # Automated test suite (50 tests passing)
+    ├── test_flask_app.py       # Full-stack Flask application route & workflow tests
+    ├── test_streamlit_backend.py # Streamlit backend logic tests
+    ├── test_consolidated_main.py # Self-contained main.py tests
     ├── test_database.py        # Database transactions, foreign keys & rollbacks
     ├── test_parsers.py         # CSV, TXT (pipe & comma), text PDF & scanned PDF tests
     ├── test_bulk_import.py     # 100+ CSV import, duplicates, selectivity & update modes

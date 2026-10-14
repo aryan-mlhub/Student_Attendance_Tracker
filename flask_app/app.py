@@ -15,7 +15,6 @@ import io
 import secrets
 from pathlib import Path
 from datetime import datetime, date
-from typing import Optional, Dict, Any, List
 
 from flask import (
     Flask,
@@ -29,7 +28,6 @@ from flask import (
     Response,
     abort,
 )
-from werkzeug.utils import secure_filename
 
 from database import (
     Database,
@@ -39,7 +37,6 @@ from database import (
     ReportsManager,
     DuplicateRollNumberError,
     ValidationError,
-    VALID_STATUSES,
     ATTENDANCE_DEFICIT_THRESHOLD,
 )
 

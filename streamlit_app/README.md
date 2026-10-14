@@ -49,11 +49,10 @@ This web application is located in the `streamlit_app/` directory and is complet
 
 ```
 StudentAttendanceTracker/
-├── main.py                     # Original standalone Tkinter desktop application
+├── main.py                     # Standalone Tkinter desktop application
 ├── requirements.txt            # Repository dependencies
-├── backup_original/            # Backup of original source modules
-├── templates/                  # Sample import templates
-├── tests/                      # Automated unit and integration tests (37 passing)
+├── templates/                  # Sample import templates and test fixtures
+├── tests/                      # Automated unit and integration tests (50 passing)
 └── streamlit_app/              # 🌐 Streamlit Web Application (Separate folder)
     ├── app.py                  # Streamlit web UI & interactive controllers
     ├── backend.py              # Pure Python decoupled business logic & SQLite layer
