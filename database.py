@@ -42,7 +42,15 @@ except ImportError:
 
 # Default Paths and Constants
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = Path(os.environ.get("ATTENDANCE_DB_PATH", BASE_DIR / "attendance_tracker.db"))
+
+def _resolve_default_db_path() -> Path:
+    if os.environ.get("ATTENDANCE_DB_PATH"):
+        return Path(os.environ["ATTENDANCE_DB_PATH"])
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(str(BASE_DIR), os.W_OK):
+        return Path("/tmp/attendance_tracker.db")
+    return BASE_DIR / "attendance_tracker.db"
+
+DEFAULT_DB_PATH = _resolve_default_db_path()
 
 ATTENDANCE_DEFICIT_THRESHOLD = 75.0
 VALID_STATUSES = {"Present", "Absent", "Leave"}
@@ -164,9 +172,12 @@ class Database:
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
 
         if self.database_url and HAS_PSYCOPG2:
-            norm_url = self.database_url
+            norm_url = str(self.database_url).strip().strip("'").strip('"')
             if norm_url.startswith("postgres://"):
                 norm_url = "postgresql://" + norm_url[len("postgres://"):]
+            if "sslmode=" not in norm_url and any(h in norm_url for h in ("neon.tech", "supabase", "aws", "pooler")):
+                connector = "&" if "?" in norm_url else "?"
+                norm_url = f"{norm_url}{connector}sslmode=require"
             self.database_url = norm_url
             try:
                 test_conn = psycopg2.connect(self.database_url, connect_timeout=5)
