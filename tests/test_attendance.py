@@ -8,10 +8,15 @@ Tests for attendance_manager.py:
 - Persistence across database re-connections
 """
 
+import sys
 import unittest
 import tempfile
 from pathlib import Path
-from main import Database, StudentManager, AttendanceManager
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from database import Database, StudentManager, AttendanceManager
 
 
 class TestAttendance(unittest.TestCase):

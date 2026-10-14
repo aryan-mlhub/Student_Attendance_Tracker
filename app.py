@@ -659,10 +659,10 @@ def internal_server_error(e):
 
 
 # ---------------------------------------------------------------------
-# Development Server Runner
+# Application Runner
 # ---------------------------------------------------------------------
 
-if __name__ == "__main__":
+def find_available_port(default_port: int = 5000) -> int:
     import socket
 
     def is_port_in_use(p: int) -> bool:
@@ -670,13 +670,19 @@ if __name__ == "__main__":
             return s.connect_ex(("127.0.0.1", p)) == 0
 
     if os.environ.get("PORT"):
-        port = int(os.environ.get("PORT"))
-    else:
-        port = 5001 if is_port_in_use(5000) else 5000
+        return int(os.environ.get("PORT"))
+    return 5001 if is_port_in_use(default_port) else default_port
 
+
+def main():
+    port = find_available_port()
     print(f"\n=======================================================")
-    print(f" Student Attendance Tracker (Flask Edition)")
+    print(f" Student Attendance Tracker")
     print(f" Live URL: http://127.0.0.1:{port}")
     print(f"=======================================================\n")
     app.run(host="0.0.0.0", port=port, debug=False)
+
+
+if __name__ == "__main__":
+    main()
 

@@ -2,10 +2,15 @@
 Tests for parsers: CSV, TXT, text-based PDF, and scanned PDF detection.
 """
 
+import sys
 import unittest
 import tempfile
 from pathlib import Path
-from main import PDFParser, BulkImportManager, Database, StudentManager
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from database import PDFParser, BulkImportManager, Database, StudentManager
 
 
 class TestParsers(unittest.TestCase):
@@ -16,7 +21,7 @@ class TestParsers(unittest.TestCase):
         self.db = Database(self.temp_path / "test.db")
         self.sm = StudentManager(self.db)
         self.importer = BulkImportManager(self.db, self.sm)
-        self.templates_dir = Path(__file__).resolve().parent.parent / "templates"
+        self.templates_dir = ROOT_DIR / "static" / "samples"
 
     def tearDown(self):
         self.temp_dir.cleanup()

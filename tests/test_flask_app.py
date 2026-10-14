@@ -20,9 +20,9 @@ import unittest
 from pathlib import Path
 from datetime import date, timedelta
 
-# Add flask_app to sys.path
-FLASK_DIR = Path(__file__).resolve().parent.parent / "flask_app"
-sys.path.insert(0, str(FLASK_DIR))
+# Add project root to sys.path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
 import app as flask_module
 from database import (
@@ -263,7 +263,7 @@ class TestFlaskApp(unittest.TestCase):
 
     def test_pdf_parsing_sample_file(self):
         """Test parsing text-based sample PDF through BulkImportManager."""
-        pdf_path = FLASK_DIR / "static" / "samples" / "sample_students.pdf"
+        pdf_path = ROOT_DIR / "static" / "samples" / "sample_students.pdf"
         self.assertTrue(pdf_path.exists())
         pdf_bytes = pdf_path.read_bytes()
         res = self.import_mgr.load_file_content("sample_students.pdf", pdf_bytes)
@@ -275,7 +275,7 @@ class TestFlaskApp(unittest.TestCase):
 
     def test_scanned_pdf_detection_and_ocr_guidance(self):
         """Test that image-only/scanned PDFs are detected and error message explains OCR."""
-        scanned_path = FLASK_DIR / "static" / "samples" / "sample_scanned.pdf"
+        scanned_path = ROOT_DIR / "static" / "samples" / "sample_scanned.pdf"
         self.assertTrue(scanned_path.exists())
         scanned_bytes = scanned_path.read_bytes()
         res = self.import_mgr.load_file_content("sample_scanned.pdf", scanned_bytes)

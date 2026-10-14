@@ -1,99 +1,87 @@
-# 🎓 Student Attendance Tracker (Desktop Tkinter & Web Streamlit)
+# 🎓 Student Attendance Tracker
 
-A complete college attendance tracking and management system designed for college faculty and educational institutions. Features student management, daily attendance logging, multi-format bulk import (CSV, TXT, PDF, Excel), attendance percentage calculations, < 75% deficit alerts, and CSV exports.
-
-Available in three editions:
-1. **🌐 Full-Stack Web Application (`flask_app/`):** Complete Flask + Tailwind CSS + Jinja2 + SQLite web application ready for local or cloud deployment (Vercel, Render).
-2. **🎈 Interactive Web Application (`streamlit_app/`):** Streamlit-based web interface deployable directly to **Streamlit Community Cloud**.
-3. **🖥️ Desktop Application (`main.py`):** Standalone Tkinter/ttk desktop interface operating 100% offline.
+A responsive full-stack Python web application for college attendance management, faculty record-keeping, and academic reporting. Built with **HTML5, Tailwind CSS, Python 3, Flask, and SQLite**.
 
 ---
 
-## ⚡ Quick Launch
+## 🏗️ Architecture & Technology Stack
 
-### 🌐 Run Flask Web Application
-```powershell
-pip install -r flask_app/requirements.txt
-python flask_app/app.py
 ```
-Visit: `http://127.0.0.1:5000` (or `5001`)
-
-### 🎈 Run Streamlit Web Application
-```powershell
-pip install -r streamlit_app/requirements.txt
-python -m streamlit run streamlit_app/app.py
+Frontend: HTML5 + Tailwind CSS + Vanilla JS (Modals & Toast Notifications)
+Backend:  Python 3 + Flask Framework
+Database: SQLite (attendance_tracker.db) with Foreign Key Constraints & Cascades
+Deploy:   Vercel Serverless (@vercel/python) / Render / Python WSGI
 ```
 
-### 🖥️ Run Tkinter Desktop Application
-```powershell
-python main.py
+- **Backend**: Python 3 standard libraries + Flask (all business logic, validation, calculations, and database transactions executed in Python).
+- **Frontend**: Responsive Jinja2 templates styled with Tailwind CSS; zero JavaScript frameworks (no React, Vue, or Angular).
+- **Parsers**: Multi-format document parser supporting CSV, TXT, text-based PDF via `pypdf`, and Excel via `openpyxl`.
+- **Database**: Atomic SQLite transactions with PRAGMA `foreign_keys = ON` ensuring complete referential integrity.
+
+---
+
+## ⚡ Quick Start
+
+### 1. Clone & Navigate
+```bash
+git clone https://github.com/aryan-mlhub/Student_Attendance_Tracker.git
+cd Student_Attendance_Tracker
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Run Application
+```bash
+python app.py
+```
+*(Or run `python main.py`)*
+
+Open your browser and navigate to:
+```
+http://127.0.0.1:5000  (or http://127.0.0.1:5001 if port 5000 is occupied)
 ```
 
 ---
 
-## 🌟 Key Highlights & Features
+## 🌟 Key Features
 
-### 1. 📥 Bulk Student Import (Most Important Feature)
-Faculty members can add an entire class roster in seconds instead of keying in students one by one:
+### 1. 📊 Real-Time Dashboard
+- **Key Metrics**: Total registered students, students present today, students absent today, and students on approved leave.
+- **Attendance Rate**: Live daily percentage calculation with visual progress bar.
+- **Attendance Deficit Alert Banner**: Prominently warns faculty if any student falls below the mandatory **75% attendance threshold**.
+- **Date Switcher**: Fast navigation between Today, Yesterday, or any historical date.
+
+### 2. 👥 Student Directory & Management
+- **Full CRUD**: Add, edit, view, and delete students with cascading removal of attendance records.
+- **Duplicate Prevention**: Enforces unique roll numbers (`COLLATE NOCASE`) with server-side error feedback.
+- **Search & Filters**: Instant search by roll number or name, filterable by class and section.
+- **Student Profile**: Individual student attendance history, overall attendance percentage, and status indicators.
+
+### 3. 📅 Class Attendance Marking
+- **Three Statuses Supported**: **Present (P)**, **Absent (A)**, and **Leave (L)**.
+- **Fast Batch Actions**: **Mark All Present**, **Mark All Absent**, or reset selections with one click.
+- **Overwrite Guard**: Built-in modal warning prevents accidental overwriting of previously submitted attendance.
+
+### 4. 📥 Multi-Format Bulk Import
 - **Supported Formats**:
-  - **`.csv`**: Automatically detects headers (`Roll No`, `Student Name`, `Class`, `Section`) with support for variations like `roll_no`, `Roll Number`, `Name`, `Branch`, `Division`.
-  - **`.txt`**: Handles structured key-value lines (`Roll No: 101 | Name: Rahul Sharma | Class: CSE | Section: A`) as well as comma/pipe/tab delimited records (`101, Rahul Sharma, CSE, A`).
-  - **`.pdf`**: Extracts student records from text-based PDFs using `pypdf`, intelligently identifying roll numbers and names while filtering out headers, footers, and page numbers.
-  - **`.xlsx`**: Native Excel spreadsheet import via `openpyxl`.
-- **Scanned PDF Detection**: If an uploaded PDF is image-only with no extractable text characters, the application detects this condition and explains OCR requirements clearly.
-- **5-Step Guided Faculty Workflow**:
-  1. **Select File**: Choose CSV, TXT, PDF, or XLSX and view file size and metadata.
-  2. **Preview Data**: Review extracted rows in a clear table with validation status badges.
-  3. **Review & Edit**: Toggle selection, edit individual records directly in the preview, remove invalid rows, or select all valid rows.
-  4. **Duplicate Handling Choice**: Choose between **Skip duplicates** (safely add only new students) or **Update existing student details**.
-  5. **Transactional Database Import**: Atomic SQLite transactions guarantee that data is either imported completely or rolled back safely upon any system failure.
-- **Built-in Sample Templates**: One-click download buttons for `sample_students.csv`, `sample_students.txt`, and PDF formatting guidelines.
+  - `.csv`: Automatic header detection (`Roll No`, `Student Name`, `Class`, `Section`).
+  - `.txt`: Key-value pipe formats (`Roll No: 101 | Name: Rahul | Class: CSE | Section: A`) and comma/tab-delimited records.
+  - `.pdf`: Structured text extraction using `pypdf`, filtering headers/footers.
+  - `.xlsx`: Native Excel import via `openpyxl`.
+- **Scanned PDF Detection**: Identifies image-only scanned PDFs and provides actionable guidance.
+- **Interactive Preview Table**: Review extracted data with validation badges before committing.
+- **Duplicate Handling**: Choose between **Skip duplicates** or **Update existing student details**.
+- **Transactional Safety**: Atomic database commit rolls back all changes if any error occurs.
 
-### 2. 👥 Student Directory Management
-- View all registered students with sorting by clicking any column header.
-- Instant live search by student name or roll number.
-- Filter by Class and Section with dynamic dropdowns.
-- Add single students manually with field validation.
-- Edit student records with a double-click or edit button.
-- Delete student with confirmation dialog (cascading removal of attendance records).
-
-### 3. 📅 Attendance Marking & Historical Editing
-- Class-wise attendance marking for any selected date (`YYYY-MM-DD`).
-- Statuses supported: **Present (P)**, **Absent (A)**, and **Leave (L)**.
-- Interactive status toggling: Double-click any row to cycle through `Present -> Absent -> Leave -> Present`.
-- Quick batch actions: **Mark All Present**, **Mark All Absent**, or **Clear All**.
-- Overwrite protection: Displays a warning if attendance has already been recorded for that class and date before overwriting.
-- Automatic persistence: All records saved permanently in SQLite.
-
-### 4. 📊 Real-Time Dashboard
-- Summary metric cards: Total Registered Students, Present Today, Absent Today, On Leave Today, and Daily Attendance Rate %.
-- Date switcher to inspect attendance for Today, Yesterday, or any custom date.
-- Defaulter alert banner: Instantly warns faculty when students drop below the 75% attendance threshold.
-- Recent attendance activity feed showing the latest marked classes and percentages.
-- One-click shortcuts for Quick Actions.
-
-### 5. 📈 Attendance Reports & Defaulter Tracking
-- Class-wise and individual attendance analytics.
-- Date-range filter (Start Date to End Date).
-- **Attendance Percentage Formula**:
-  $$\text{Attendance Percentage} = \frac{\text{Present Days}}{\text{Present Days} + \text{Absent Days}} \times 100$$
-  *(Approved Leave days do not penalize students and are excluded from the denominator)*.
-- **75% Threshold Alert**: Highlights students below 75% in high-contrast red warning status.
-- Single-student detailed chronological log: Double-click any student in reports to view their complete date-by-date attendance history.
-- **One-Click CSV Export**: Save filtered attendance reports as a formatted CSV file.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Details |
-| :--- | :--- | :--- |
-| **Language** | Python 3 | Core language (3.10+) |
-| **GUI Framework** | Tkinter & `ttk` | Modern desktop UI with custom styles |
-| **Database** | SQLite3 | Local embedded database with foreign-key cascade |
-| **PDF Extraction** | `pypdf` | Extract text-based student registers |
-| **Excel Support** | `openpyxl` | Read `.xlsx` class rosters |
-| **File Formats** | Standard Library (`csv`, `pathlib`, `re`, `datetime`) | Fast, native, and robust file parsing |
+### 5. 📈 Reports, Defaulter Analytics & CSV Export
+- **Attendance Formula**:
+  $$\text{Attendance \%} = \frac{\text{Present Days}}{\text{Present Days} + \text{Absent Days}} \times 100$$
+  *(Approved leaves are excluded from the denominator so students are not penalized).*
+- **Defaulter Filter**: One-click checkbox filter to view only students falling below **75% attendance**.
+- **CSV Export**: One-click download of the complete attendance report with UTF-8 BOM encoding.
 
 ---
 
@@ -101,124 +89,70 @@ Faculty members can add an entire class roster in seconds instead of keying in s
 
 ```text
 StudentAttendanceTracker/
-├── main.py                     # Self-contained Desktop Tkinter application & SQLite engine
-├── requirements.txt            # Repository dependencies
-├── README.md                   # Complete documentation and user manual
-├── .gitignore                  # Git exclusions for database and temporary files
+├── app.py                      # Flask application entry point, routes & error handlers
+├── main.py                     # Primary launcher script (aliases app.py)
+├── database.py                 # SQLite database engine, StudentManager, AttendanceManager,
+│                               # BulkImportManager, PDFParser & ReportsManager
+├── requirements.txt            # Python dependencies (Flask, pypdf, openpyxl, gunicorn)
+├── vercel.json                 # Vercel serverless deployment configuration
+├── README.md                   # Project documentation
+├── .gitignore                  # Git exclusions for databases and caches
 │
-├── flask_app/                  # 🌐 Full-Stack Flask Web Application (Tailwind CSS + Jinja2)
-│   ├── app.py                  # Flask server, route controllers & REST endpoints
-│   ├── database.py             # SQLite database layer, managers, parsers & reporting
-│   ├── requirements.txt        # Flask web application dependencies
-│   ├── vercel.json             # Vercel serverless deployment configuration
-│   ├── README.md               # Flask documentation and setup guide
-│   ├── templates/              # Jinja2 HTML templates
-│   └── static/                 # Tailwind custom CSS, vanilla JS, and sample templates
+├── templates/                  # Jinja2 HTML templates
+│   ├── base.html               # Master layout with responsive sidebar & modals
+│   ├── dashboard.html          # Real-time metrics, date picker & session history
+│   ├── students.html           # Student directory with search, filter & pagination
+│   ├── student_form.html       # Add/Edit student form with server-side validation
+│   ├── student_detail.html     # Individual student profile & date-wise attendance log
+│   ├── attendance.html         # Daily attendance marking sheet with overwrite guard
+│   ├── history.html            # Chronological attendance archive
+│   ├── bulk_import.html        # Multi-format upload, preview table & error reporting
+│   ├── reports.html            # Attendance analytics, <75% defaulters filter & CSV export
+│   ├── 404.html                # Custom 404 error page
+│   └── 500.html                # Custom 500 error page
 │
-├── streamlit_app/              # 🎈 Interactive Streamlit Web Application
-│   ├── app.py                  # Streamlit web UI & interactive controllers
-│   ├── backend.py              # Pure Python decoupled business logic & SQLite layer
-│   ├── requirements.txt        # Streamlit web app dependencies
-│   ├── README.md               # Streamlit deployment documentation
-│   └── templates/              # Sample CSV, TXT, and PDF templates
+├── static/                     # Static web assets
+│   ├── css/
+│   │   └── custom.css          # Custom scrollbars and modal backdrop styling
+│   ├── js/
+│   │   └── main.js             # Client-side interactions (dialog modals, toasts, bulk select)
+│   ├── samples/                # Downloadable sample roster templates (CSV, TXT, PDF)
+│   └── uploads/                # Temporary upload processing directory
 │
-├── templates/                  # Sample templates and test fixtures
-│   ├── sample_students.csv     # Sample CSV class list
-│   ├── sample_students_pipe.txt# Sample TXT with pipe-separated records
-│   ├── sample_students_comma.txt# Sample TXT with comma-delimited records
-│   ├── sample_students.pdf     # Valid text-based sample PDF register
-│   ├── sample_scanned.pdf      # Textless sample PDF to test scanned document detection
-│   └── generate_sample_pdf.py  # Utility script to generate sample test PDFs
-│
-└── tests/                      # Automated test suite (50 tests passing)
-    ├── test_flask_app.py       # Full-stack Flask application route & workflow tests
-    ├── test_streamlit_backend.py # Streamlit backend logic tests
-    ├── test_consolidated_main.py # Self-contained main.py tests
-    ├── test_database.py        # Database transactions, foreign keys & rollbacks
-    ├── test_parsers.py         # CSV, TXT (pipe & comma), text PDF & scanned PDF tests
-    ├── test_bulk_import.py     # 100+ CSV import, duplicates, selectivity & update modes
-    ├── test_attendance.py      # Attendance saving, percentage formula & persistence
-    ├── test_reports.py         # Defaulter detection (< 75%) and CSV export verification
-    └── test_e2e_workflow.py    # End-to-end full user journey integration test
+└── tests/                      # Automated unit and integration test suite
+    ├── test_flask_app.py       # Full-stack Flask route, workflow & error tests
+    ├── test_database.py        # SQLite schema, transactions & foreign key cascades
+    ├── test_attendance.py      # Attendance saving, date statistics & formula tests
+    ├── test_parsers.py         # CSV, TXT, text PDF & scanned PDF parser tests
+    ├── test_bulk_import.py     # 100+ student batch import, validation & duplicate tests
+    ├── test_reports.py         # Attendance percentage & <75% defaulter detection tests
+    └── test_e2e_workflow.py    # Complete end-to-end user lifecycle integration test
 ```
 
 ---
 
-## 🚀 Installation & Running
+## 🧪 Automated Testing
 
-### 1. Prerequisites
-Ensure **Python 3.10 or higher** is installed on your Windows machine:
-```powershell
-python --version
+Run the complete test suite:
+```bash
+python -m unittest discover -s tests -p "test_*.py"
 ```
-
-### 2. Install Dependencies
-Open a PowerShell or Command Prompt terminal in the project directory:
-```powershell
-pip install -r requirements.txt
-```
-
-### 3. Launch the Application
-Run the main Python script:
-```powershell
-python main.py
-```
+All 38 unit and integration tests validate:
+- Database creation, foreign key enforcement, and atomic rollbacks.
+- Multi-format file parsing (CSV, TXT, PDF, Excel).
+- Attendance calculation formulas (Present / (Present + Absent) * 100).
+- Defaulter detection (< 75% threshold).
+- All Flask HTTP routes, forms, CSRF tokens, and CSV exports.
 
 ---
 
-## 🧪 Running Automated Tests
+## ☁️ Deployment to Vercel
 
-A comprehensive suite of 25 unit, integration, and end-to-end tests is included:
+The application is pre-configured for Vercel deployment with [vercel.json](file:///c:/Users/ADMIN/OneDrive/Desktop/StudentAttendanceTracker/vercel.json):
 
-```powershell
-python -m unittest discover tests
+```bash
+npm install -g vercel
+vercel
 ```
 
-To run individual test modules:
-```powershell
-python -m unittest tests/test_database.py
-python -m unittest tests/test_parsers.py
-python -m unittest tests/test_bulk_import.py
-python -m unittest tests/test_attendance.py
-python -m unittest tests/test_reports.py
-python -m unittest tests/test_e2e_workflow.py
-```
-
----
-
-## 📋 Faculty User Guide
-
-### How to Bulk Import Students
-1. Launch the application and click **📥 Bulk Import** on the sidebar.
-2. Click **Download CSV Template** or **Create TXT Template** if you need reference formats.
-3. Click **Browse & Select File...** and choose your `.csv`, `.txt`, `.pdf`, or `.xlsx` file.
-4. The system automatically scans the file:
-   - Roll numbers already in your database are highlighted as **Exists in Database**.
-   - Duplicates within the same file are highlighted as **Duplicate in File**.
-   - Incomplete rows missing a roll number or name are highlighted as **Missing Field**.
-5. Faculty can:
-   - Double-click any row to fix a typo or update the details before importing.
-   - Click **Select All Valid** or manually check/uncheck rows.
-   - Choose whether existing roll numbers should be skipped or updated.
-6. Click **✅ Confirm & Import Students**. The records are committed to the SQLite database and will immediately appear in the **Students Directory**, **Attendance Sheet**, and **Reports**.
-
-### Marking Attendance
-1. Click **📅 Attendance** on the sidebar.
-2. Select the class (e.g., `CSE`) and section (e.g., `A`).
-3. Set the date (defaults to today's date).
-4. Click **✔ Mark All Present** to quickly mark everyone present, then click individual absent students to toggle their status to **Absent** or **Leave**.
-5. Click **💾 Save Attendance for Class**.
-
-### Viewing Reports & Exporting
-1. Click **📈 Reports** on the sidebar.
-2. Select your class and date range.
-3. Check **⚠️ Only < 75% Defaulters** to view only students whose attendance is below the mandatory requirement.
-4. Double-click any student to view their date-by-date attendance history.
-5. Click **📥 Export Filtered Report to CSV** to save the report to your computer.
-
----
-
-## 🔒 Data Safety & Offline Guarantee
-- **Permanent SQLite Storage**: Data is saved to `attendance_tracker.db` in the application directory.
-- **Transactions with Rollback**: If an import or batch save encounters an unexpected error, SQLite rolls back the transaction completely, preventing data corruption.
-- **Offline Operation**: Works entirely on the local machine with no cloud logins, third-party trackers, or internet connection needed.
+During setup, select default settings. Vercel automatically detects `@vercel/python` and serves `app.py`.

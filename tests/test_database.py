@@ -2,11 +2,16 @@
 Tests for database.py: schema initialization, foreign keys, transactions, and rollback.
 """
 
+import sys
 import unittest
 import tempfile
 import os
 from pathlib import Path
-from main import Database
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from database import Database
 
 
 class TestDatabase(unittest.TestCase):

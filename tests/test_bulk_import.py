@@ -10,10 +10,15 @@ Tests for bulk_import.py:
 - Duplicate resolution: skip vs update
 """
 
+import sys
 import unittest
 import tempfile
 from pathlib import Path
-from main import Database, StudentManager, BulkImportManager, ImportValidationStatus
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from database import Database, StudentManager, BulkImportManager, ImportValidationStatus
 
 
 class TestBulkImport(unittest.TestCase):

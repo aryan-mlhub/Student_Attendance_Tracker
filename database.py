@@ -31,9 +31,8 @@ except ImportError:
 
 
 # Default Paths and Constants
-FLASK_APP_DIR = Path(__file__).resolve().parent
-DEFAULT_DB_PATH = Path(os.environ.get("ATTENDANCE_DB_PATH", FLASK_APP_DIR / "attendance_tracker.db"))
-ROOT_DB_PATH = FLASK_APP_DIR.parent / "attendance_tracker.db"
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_DB_PATH = Path(os.environ.get("ATTENDANCE_DB_PATH", BASE_DIR / "attendance_tracker.db"))
 
 ATTENDANCE_DEFICIT_THRESHOLD = 75.0
 VALID_STATUSES = {"Present", "Absent", "Leave"}
@@ -98,12 +97,6 @@ class Database:
         """Create tables and indexes if they do not exist, or copy existing db if present."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # If db doesn't exist yet, check if root db exists to preserve existing data
-        if not self.db_path.exists() and ROOT_DB_PATH.exists() and self.db_path.resolve() != ROOT_DB_PATH.resolve():
-            try:
-                shutil.copy2(str(ROOT_DB_PATH), str(self.db_path))
-            except Exception:
-                pass
 
         with self.transaction() as conn:
             cursor = conn.cursor()
@@ -551,7 +544,10 @@ class BulkImportManager:
         self.pdf_parser = PDFParser()
         self.current_records: List[Dict[str, Any]] = []
         self.unparsed_items: List[Dict[str, Any]] = []
-        self.raw_text_preview: str = ""
+    def load_file(self, file_path: Path | str) -> Dict[str, Any]:
+        """Load and parse file from a disk path."""
+        path = Path(file_path)
+        return self.load_file_content(path.name, path.read_bytes())
 
     def load_file_content(self, file_name: str, file_bytes: bytes) -> Dict[str, Any]:
         """Load and parse file bytes directly from an upload."""
@@ -688,8 +684,26 @@ class BulkImportManager:
             "ready_to_import": ready_to_import
         }
 
-    def execute_import(self, selected_records: List[Dict[str, Any]], duplicate_action: str = "skip") -> Dict[str, Any]:
+    def toggle_record_selection(self, record_id: int, is_selected: bool) -> None:
+        """Toggle selection state of a loaded record."""
+        for r in self.current_records:
+            if r.get("id") == record_id:
+                r["selected"] = is_selected
+                break
+
+    def execute_import(self, selected_records: Optional[List[Dict[str, Any]]] = None, duplicate_action: str = "skip") -> Dict[str, Any]:
         """Atomically import the chosen student records."""
+        if selected_records is None:
+            selected_records = [
+                r for r in self.current_records
+                if r.get("selected", True) and r.get("status") in (
+                    ImportValidationStatus.VALID,
+                    ImportValidationStatus.DUP_IN_DB,
+                    "valid",
+                    "duplicate_db",
+                )
+            ]
+
         if not selected_records:
             return {
                 "success": False,
@@ -1305,7 +1319,7 @@ class ReportsManager:
     def generate_csv_string(self, report_data: List[Dict[str, Any]]) -> str:
         """Returns CSV formatted string for direct download."""
         output = io.StringIO()
-        writer = csv.writer(output)
+        writer = csv.writer(output, lineterminator="\n")
 
         headers = [
             "Roll Number",
@@ -1336,4 +1350,10 @@ class ReportsManager:
             ])
 
         return output.getvalue()
+
+    def export_report_to_csv(self, file_path: Path | str, report_data: List[Dict[str, Any]]) -> bool:
+        """Export report data to a CSV file."""
+        csv_str = self.generate_csv_string(report_data)
+        Path(file_path).write_text(csv_str, encoding="utf-8-sig")
+        return True
 

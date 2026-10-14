@@ -6,11 +6,16 @@ Tests for reports.py:
 - Export reports to CSV
 """
 
+import sys
 import unittest
 import tempfile
 import csv
 from pathlib import Path
-from main import Database, StudentManager, AttendanceManager, ReportsManager
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from database import Database, StudentManager, AttendanceManager, ReportsManager
 
 
 class TestReports(unittest.TestCase):
