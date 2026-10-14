@@ -161,6 +161,23 @@
                 <p class="text-xs text-slate-500 mt-0.5">{% block page_subtitle %}Overview and attendance metrics{% endblock %}</p>
             </div>
             <div class="flex items-center space-x-3">
+                {% if is_postgres %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Connected to persistent hosted PostgreSQL database">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                        PostgreSQL (Cloud)
+                    </span>
+                {% elif is_vercel %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Running on temporary serverless storage. Configure DATABASE_URL in Vercel to persist data permanently.">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span>
+                        Ephemeral Fallback (Add DATABASE_URL)
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200" title="Using local SQLite file">
+                        <span class="w-2 h-2 rounded-full bg-slate-400 mr-1.5"></span>
+                        SQLite (Local)
+                    </span>
+                {% endif %}
+
                 <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                     <svg class="w-3.5 h-3.5 mr-1 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>

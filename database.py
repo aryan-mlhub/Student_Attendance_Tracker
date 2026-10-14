@@ -169,7 +169,9 @@ class Database:
     def __init__(self, db_path: Optional[str | Path] = None, database_url: Optional[str] = None):
         self.database_url = database_url or os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
         self.is_postgres = False
+        self.connection_error: Optional[str] = None
         self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
+        self._schema_initialized = False
 
         if self.database_url and HAS_PSYCOPG2:
             norm_url = str(self.database_url).strip().strip("'").strip('"')
@@ -185,8 +187,11 @@ class Database:
                 self.is_postgres = True
                 print("Connected to PostgreSQL database for production data persistence.")
             except Exception as e:
+                self.connection_error = str(e)
                 print(f"Notice: PostgreSQL connection unavailable ({e}). Falling back to local SQLite.")
                 self.is_postgres = False
+        elif not self.database_url and os.environ.get("VERCEL"):
+            self.connection_error = "DATABASE_URL is not configured in Vercel environment variables."
 
         self.initialize_schema()
 
@@ -216,6 +221,9 @@ class Database:
 
     def initialize_schema(self) -> None:
         """Create tables and indexes if they do not exist."""
+        if getattr(self, "_schema_initialized", False):
+            return
+
         if self.is_postgres:
             with self.transaction() as conn:
                 cursor = conn.cursor()
@@ -270,6 +278,8 @@ class Database:
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_class_sec ON students(class_name, section);")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);")
+
+        self._schema_initialized = True
 
     def execute_query(self, query: str, params: Tuple[Any, ...] = ()) -> int:
         """Execute an INSERT/UPDATE/DELETE query and return lastrowid (or inserted ID)."""

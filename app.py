@@ -76,12 +76,16 @@ def csrf_protect():
 @app.context_processor
 def inject_global_vars():
     """Inject commonly used variables across all Jinja templates."""
+    is_vercel = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
     return {
         "csrf_token": session.get("csrf_token", ""),
         "current_year": datetime.now().year,
         "today_str": date.today().strftime("%Y-%m-%d"),
         "total_students_count": student_mgr.get_total_students_count(),
         "deficit_threshold": ATTENDANCE_DEFICIT_THRESHOLD,
+        "is_postgres": db.is_postgres,
+        "is_vercel": is_vercel,
+        "db_connection_error": db.connection_error,
     }
 
 
