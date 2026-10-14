@@ -4,19 +4,19 @@ A responsive full-stack Python web application for college attendance management
 
 ---
 
-## 🏗️ Architecture & Technology Stack
-
 ```
-Frontend: HTML5 + Tailwind CSS + Vanilla JS (Modals & Toast Notifications)
+Frontend: HTML5 + Tailwind CSS (Zero JS frameworks)
 Backend:  Python 3 + Flask Framework
-Database: SQLite (attendance_tracker.db) with Foreign Key Constraints & Cascades
-Deploy:   Vercel Serverless (@vercel/python) / Render / Python WSGI
+Database: PostgreSQL for Production (Neon / Supabase / Vercel Postgres) / SQLite for Local Dev
+Files:    Python built-in csv module for import validation and export
+Deploy:   Vercel Serverless (@vercel/python)
 ```
 
 - **Backend**: Python 3 standard libraries + Flask (all business logic, validation, calculations, and database transactions executed in Python).
 - **Frontend**: Responsive Jinja2 templates styled with Tailwind CSS; zero JavaScript frameworks (no React, Vue, or Angular).
+- **No JSON Data Architecture**: All interactions use standard HTML forms (`POST`), `request.form`, Jinja2 server-side rendering, and SQL queries. No JSON APIs, no `fetch()` requests, and no JSON files used as storage.
 - **Parsers**: Multi-format document parser supporting CSV, TXT, text-based PDF via `pypdf`, and Excel via `openpyxl`.
-- **Database**: Atomic SQLite transactions with PRAGMA `foreign_keys = ON` ensuring complete referential integrity.
+- **Database**: Automatic dual-engine compatibility. Uses hosted PostgreSQL via `DATABASE_URL` in production for durable serverless persistence, with local SQLite fallback for offline development.
 
 ---
 
@@ -146,13 +146,29 @@ All 38 unit and integration tests validate:
 
 ---
 
-## ☁️ Deployment to Vercel
+## ☁️ Deployment to Vercel (Production)
 
-The application is pre-configured for Vercel deployment with [vercel.json](file:///c:/Users/ADMIN/OneDrive/Desktop/StudentAttendanceTracker/vercel.json):
+The application is pre-configured for Vercel Serverless Python deployment using [vercel.json](file:///c:/Users/ADMIN/OneDrive/Desktop/StudentAttendanceTracker/vercel.json) and [app.py](file:///c:/Users/ADMIN/OneDrive/Desktop/StudentAttendanceTracker/app.py):
 
-```bash
-npm install -g vercel
-vercel
-```
+### 1. Hosted PostgreSQL Database (Required for Production)
+Because Vercel functions run in an ephemeral serverless environment, persistent attendance data must reside in a hosted PostgreSQL database (such as **Neon**, **Supabase**, or **Vercel Postgres**).
+1. Create a free PostgreSQL instance at [neon.tech](https://neon.tech) or [supabase.com](https://supabase.com).
+2. Copy your connection URI (e.g., `postgresql://username:password@ep-sample-123.us-east-2.aws.neon.tech/neondb?sslmode=require`).
 
-During setup, select default settings. Vercel automatically detects `@vercel/python` and serves `app.py`.
+### 2. Configure Environment Variables on Vercel
+In your Vercel Project Dashboard under **Settings > Environment Variables**, add:
+- `SECRET_KEY`: A 64-character random hex string for session encryption (generate with `python -c "import secrets; print(secrets.token_hex(32))"`).
+- `DATABASE_URL`: Your hosted PostgreSQL connection string.
+
+### 3. Deploy via GitHub or Vercel CLI
+- **GitHub Import (Recommended)**:
+  1. Push code to your GitHub repository: `https://github.com/aryan-mlhub/Student_Attendance_Tracker`
+  2. In Vercel, click **Add New > Project** and import the repository.
+  3. Add the environment variables above and click **Deploy**.
+- **Vercel CLI**:
+  ```bash
+  npm install -g vercel
+  vercel --prod
+  ```
+
+Upon first request, the database schema (tables, foreign keys, indexes) is automatically initialized.
